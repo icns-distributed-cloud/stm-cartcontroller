@@ -4,12 +4,12 @@
 * Step 1. Share a CubeMX file
 * Step 2. Create "stm-cartcontroller" folder
 * Step 3. Execute the shared CubeMX file
-* Step 3. Save as CubeMX project (Project name: cart) in "stm-cartcontroller" folder
-* Step 4. Click "Generate code" button
-* Step 5. Delete main.h file in "cart/Inc/" and main.c file "cart/Src/"
-* Step 6. Create/init local git repository in "stm-cartcontroller" folder
-* Step 7. Set git origin "https://github.com/icns-distributed-cloud/stm-cartcontroller.git"
-* Step 8. Git pull origin master
+* Step 4. Save as CubeMX project (Project name: cart) in "stm-cartcontroller" folder
+* Step 5. Click "Generate code" button
+* Step 6. Delete main.h file in "cart/Inc/" and main.c file "cart/Src/"
+* Step 7. Create/init local git repository in "stm-cartcontroller" folder
+* Step 8. Set git origin "https://github.com/icns-distributed-cloud/stm-cartcontroller.git"
+* Step 9. Git pull origin master
 
 ## 2. Project development
 * Step 1. Rasie an issue and create a branch
