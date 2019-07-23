@@ -93,8 +93,8 @@ int norm1,norm2;
 int diff1,diff2;											            // For Normalization
 int diff_w1, diff_w2;
 
-#define W1_MIN 450														// Left_Motor Initial Velocity
-#define W2_MIN 450														// Right_Motor Initial Velocity
+#define W1_MIN 550														// Left_Motor Initial Velocity
+#define W2_MIN 550														// Right_Motor Initial Velocity
 #define RANGE_MAX 60
 
 /**********Encoder Normalization*********/
@@ -275,16 +275,14 @@ void SONAR(){
 	  diff2 = distance1 - distance2;
 
 
-
-
-	  diff_w1 = (diff1/10)*(diff1/10)*(diff1/10) + diff1; 	  //(x/10)^3 +x);
-	  diff_w2 = (diff2/10)*(diff2/10)*(diff2/10) + diff2;
+	  diff_w1 = (diff1/7)*(diff1/7)*(diff1/7) + diff1; 	  //(x/10)^3 +x);
+	  diff_w2 = (diff2/7)*(diff2/7)*(diff2/7) + diff2;
 
 	  norm1 = ((float)diff_w1 - 0)/(400 - 0) * 1000;
 	  norm2 = ((float)diff_w2 - 0)/(400 - 0) * 1000;
 
-    n_v1 = norm1 + W1_MIN; // PSD value will be added here
-    n_v2 = norm2 + W2_MIN;
+    n_v1 = norm1 + W1_MIN + FrontLPSD + DiaLPSD + SideLPSD; // Sonar + PSD + default Speed
+    n_v2 = norm2 + W2_MIN + FrontRPSD + DiaRPSD + SideRPSD;
 
     if(n_v1>1000)n_v1=1000;
     if(n_v2>1000)n_v2=1000;
@@ -305,12 +303,12 @@ void PSD(){
 
 
 //	/**********PSD Analogue value to distance****************/
-//	PSDL[0]= 120 - 144*exp(-0.002*adcval[0])-7; //L 1,4,7
-//	PSDL[1]= 120 - 144*exp(-0.002*adcval[1])-7;
-//	PSDL[2]= 120 - 144*exp(-0.002*adcval[2])-7;
-//	PSDR[0]= 200 - 144*exp(-0.002*adcval[3])-7; //R 1,4,7
-//	PSDR[1]= 200 - 144*exp(-0.002*adcval[4])-7;
-//	PSDR[2]= 200 - 144*exp(-0.002*adcval[5])-7;
+//	PSDL[0]= 144*exp(-0.002*adcval[0])-7; //L 1,4,7
+//	PSDL[1]= 144*exp(-0.002*adcval[1])-7;
+//	PSDL[2]= 144*exp(-0.002*adcval[2])-7;
+//	PSDR[0]= 144*exp(-0.002*adcval[3])-7; //R 1,4,7
+//	PSDR[1]= 144*exp(-0.002*adcval[4])-7;
+//	PSDR[2]= 144*exp(-0.002*adcval[5])-7;
 
 	PSDL[0]=adcval[0];
 	PSDL[1]=adcval[1];
@@ -320,14 +318,14 @@ void PSD(){
 	PSDR[2]=adcval[5];
 
 	/**************PSD NORMALIZATION****************/
-	FrontLPSD = abs(diff1/10)((float)PSDL[0]-150)/(1000-150)*100;	//PSD Front
-	FrontRPSD = abs(diff1/10)((float)PSDR[0]-150)/(1000-150)*100;
+	FrontLPSD = ((float)PSDL[0]-150)/(1000-150)*100;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-150)/(1000-150)*100;
 
-	DiaLPSD = abs(diff1/10)((float)PSDL[1]-150)/(1000-150)*150;	//PSD Diagonal
-	DiaRPSD = abs(diff1/10)((float)PSDR[1]-150)/(1000-150)*150;
+	DiaLPSD = ((float)PSDL[1]-150)/(1000-150)*150;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-150)/(1000-150)*150;
 
-	SideLPSD = abs(diff1/10)((float)PSDL[2]-150)/(1000-150)*200;	//PSD Side
-	SideRPSD = abs(diff1/10)((float)PSDR[2]-150)/(1000-150)*200;
+	SideLPSD = ((float)PSDL[2]-150)/(1000-150)*200;	//PSD Side
+	SideRPSD = ((float)PSDR[2]-150)/(1000-150)*200;
 }
 
 void PSD_Bluetooth(){
@@ -347,25 +345,25 @@ void PSD_Bluetooth(){
   	SCI_OutString(Buf3);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-//  	itoa(PSDR[0], Buf4, 10);
-//  	SCI_OutChar('A');
-//  	SCI_OutString(Buf4);
-//  	HAL_UART_Transmit(&huart3,&space,1,10);
-//
-//  	itoa(PSDR[1], Buf5, 10);
-//  	SCI_OutChar('S');
-//  	SCI_OutString(Buf5);
-//  	HAL_UART_Transmit(&huart3,&space,1,10);
-//
-//  	itoa(PSDR[2], Buf6, 10);
-//  	SCI_OutChar('D');
-//  	SCI_OutString(Buf6);
+  	itoa(PSDR[0], Buf4, 10);
+  	SCI_OutChar('A');
+  	SCI_OutString(Buf4);
+  	HAL_UART_Transmit(&huart3,&space,1,10);
+
+  	itoa(PSDR[1], Buf5, 10);
+  	SCI_OutChar('S');
+  	SCI_OutString(Buf5);
+  	HAL_UART_Transmit(&huart3,&space,1,10);
+
+  	itoa(PSDR[2], Buf6, 10);
+  	SCI_OutChar('D');
+  	SCI_OutString(Buf6);
 
   	HAL_UART_Transmit(&huart3,&enter1,1,10);
   	HAL_UART_Transmit(&huart3,&enter2,1,10);
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//20ms Timer interrupt
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt every 20ms
 {
 
 	if(htim->Instance == TIM6){
@@ -380,8 +378,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//20ms Timer interru
 		if(encoderR<1)encoderR=0;
 
 		PSD();
-		PSD_Bluetooth();
-
+		//PSD_Bluetooth();
 	}
 }
 
@@ -524,8 +521,9 @@ int main(void)
 
   while (1)
   {
-	 // SONAR();
-	//  PID(n_v1,n_v2,encoderL,encoderR);
+
+	  SONAR();
+	  PID(n_v1,n_v2,encoderL,encoderR);
 
 
   /* USER CODE END WHILE */
