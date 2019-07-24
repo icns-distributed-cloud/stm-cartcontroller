@@ -86,7 +86,9 @@ char space=32;
 int encoderL, encoderR;
 int cntLast;
 char rx;
-char e='e';
+
+uint8_t Mode_Bluetooth;
+
 /********VELOCITY NORMALIZATION********/
 int n_v1, n_v2; 												// Normalized Velocity Value
 int norm1,norm2;
@@ -321,29 +323,29 @@ void PSD(){
 	PSDR[2]=adcval[5];
 
 	/**************PSD NORMALIZATION****************/
-	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;	//PSD Front
-	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;
+	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;
 
-	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*150;	//PSD Diagonal
-	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*150;
+	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
 
-	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*200;	//PSD Side
-	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*200;
+	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;	//PSD Side
+	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;
 }
 
 void PSD_Bluetooth(){
 
-  	itoa(FrontRPSD, Buf1, 10);
+  	itoa(PSDL[0], Buf1, 10);
   	SCI_OutChar('Q');
   	SCI_OutString(Buf1);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-  	itoa(DiaRPSD, Buf2, 10);
+  	itoa(PSDL[1], Buf2, 10);
   	SCI_OutChar('W');
   	SCI_OutString(Buf2);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-  	itoa(SideRPSD, Buf3, 10);
+  	itoa(PSDL[2], Buf3, 10);
   	SCI_OutChar('E');
   	SCI_OutString(Buf3);
   	HAL_UART_Transmit(&huart3,&space,1,10);
@@ -366,6 +368,32 @@ void PSD_Bluetooth(){
   	HAL_UART_Transmit(&huart3,&enter2,1,10);
 }
 
+void Bluetooth(int first, int second, int third, int forth){
+
+		  	itoa(first, Buf1, 10);
+		  	SCI_OutChar('A');
+		  	SCI_OutString(Buf1);
+		  	HAL_UART_Transmit(&huart3,&space,1,10);
+
+		  	itoa(second, Buf2, 10);
+		  	SCI_OutChar('B');
+		  	SCI_OutString(Buf2);
+		  	HAL_UART_Transmit(&huart3,&space,1,10);
+
+		  	itoa(third, Buf3, 10);
+		  	SCI_OutChar('C');
+		  	SCI_OutString(Buf3);
+		  	HAL_UART_Transmit(&huart3,&space,1,10);
+
+		  	itoa(forth, Buf4, 10);
+		  	SCI_OutChar('D');
+		  	SCI_OutString(Buf4);
+
+		  	HAL_UART_Transmit(&huart3,&enter1,1,10);
+		  	HAL_UART_Transmit(&huart3,&enter2,1,10);
+
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt every 20ms
 {
 
@@ -381,7 +409,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 		if(encoderR<1)encoderR=0;
 
 		PSD();
-		//PSD_Bluetooth();
+		if(Mode_Bluetooth==1) {
+			TIM3->CCR1=0;
+			TIM3->CCR2=0;
+			Bluetooth(distance1,distance2,n_v1,n_v2);
+			PSD_Bluetooth();
+
+		}
+
+
 	}
 }
 
@@ -522,11 +558,15 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  Mode_Bluetooth=0;
+
   while (1)
   {
-
 	  SONAR();
+
+	  if(Mode_Bluetooth==0){
 	  PID(n_v1,n_v2,encoderL,encoderR);
+	  }
 
 
   /* USER CODE END WHILE */
@@ -626,29 +666,25 @@ static void MX_NVIC_Init(void)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
  {
-
 	char g='g';
-
-//	float KP= 0.8;//0.02
-//	float KI= 0.65;//0.01
-//	float KD= 0.1;
 
 	 if(huart->Instance == USART3){
 
 		 HAL_UART_Receive_IT(&huart3,&rx,1);
-			HAL_UART_Transmit(&huart3,&enter1,1,10);
-			HAL_UART_Transmit(&huart3,&enter2,1,10);
-		  HAL_UART_Transmit(&huart3, &g, 1, 10);
-			HAL_UART_Transmit(&huart3,&enter1,1,10);
-			HAL_UART_Transmit(&huart3,&enter2,1,10);
 
-	 	 if(rx=='q'){ //all clear
-	 		 LKP+=0.1;
-	 		HAL_UART_Transmit(&huart3, &e, 1, 10);
-	 	 }
+		 if(rx=='b'){
+			 HAL_UART_Transmit(&huart3, &g, 1, 10);
+			 Mode_Bluetooth=1;
+		 }
 
+		 if(rx=='m') Mode_Bluetooth=0;
 
 	 }
+//		  HAL_UART_Transmit(&huart3, &g, 1, 10);
+//		  HAL_UART_Transmit(&huart3, &space, 1, 10);
+//		  HAL_UART_Transmit(&huart3, &rx, 1, 10);
+//			HAL_UART_Transmit(&huart3,&enter1,1,10);
+//			HAL_UART_Transmit(&huart3,&enter2,1,10);
 
  }//전체인터럽트 끝나는 괄호
 
