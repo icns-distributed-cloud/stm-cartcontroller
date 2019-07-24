@@ -109,7 +109,9 @@ int NocoderR;
 #define NORM_MAX 200													// Maximum Value of Sonar Sensor
 volatile uint32_t distance1 , distance2, distance3;
 
-/***************PSD********************/
+/***************PSD Normalization********************/
+#define PSD_MIN 150
+#define PSD_MAX 1000
 uint16_t adcval[6];
 uint16_t PSDL[3];
 uint16_t PSDR[3];
@@ -120,7 +122,8 @@ uint16_t DiaRPSD;
 uint16_t SideLPSD;
 uint16_t SideRPSD;
 
-/********FOR ENCODER********/
+
+/********ENCODER for estimating current speed********/
 float SpeedL, SpeedR;
 
 float Motor_Signal_L;
@@ -135,7 +138,7 @@ float Old_Error_R=0;
 float Old_Motor_L;
 float Old_Motor_R;
 
-/************FOR PID*************/
+/************PID Control for cornering and avoiding obstacles*************/
 float TermP_L;
 float TermP_R;
 
@@ -318,14 +321,14 @@ void PSD(){
 	PSDR[2]=adcval[5];
 
 	/**************PSD NORMALIZATION****************/
-	FrontLPSD = ((float)PSDL[0]-150)/(1000-150)*100;	//PSD Front
-	FrontRPSD = ((float)PSDR[0]-150)/(1000-150)*100;
+	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;
 
-	DiaLPSD = ((float)PSDL[1]-150)/(1000-150)*150;	//PSD Diagonal
-	DiaRPSD = ((float)PSDR[1]-150)/(1000-150)*150;
+	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*150;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*150;
 
-	SideLPSD = ((float)PSDL[2]-150)/(1000-150)*200;	//PSD Side
-	SideRPSD = ((float)PSDR[2]-150)/(1000-150)*200;
+	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*200;	//PSD Side
+	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*200;
 }
 
 void PSD_Bluetooth(){
