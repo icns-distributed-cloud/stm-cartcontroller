@@ -89,6 +89,12 @@ char rx;
 
 uint8_t Mode_Bluetooth;
 
+
+/************Low PassFilter**************/
+float ts=50; //50Hz -> 20ms
+float tau=0.001; // constant value for LPF
+
+
 /********VELOCITY NORMALIZATION********/
 int n_v1, n_v2; 												// Normalized Velocity Value
 int norm1,norm2;
@@ -112,8 +118,8 @@ int NocoderR;
 volatile uint32_t distance1 , distance2, distance3;
 
 /***************PSD Normalization********************/
-#define PSD_MIN 150
-#define PSD_MAX 1000
+#define PSD_MIN 200
+#define PSD_MAX 900
 uint16_t adcval[6];
 uint16_t PSDL[3];
 uint16_t PSDR[3];
@@ -124,6 +130,10 @@ uint16_t DiaRPSD;
 uint16_t SideLPSD;
 uint16_t SideRPSD;
 
+uint16_t PSDLeft;
+uint16_t PSDRight;
+int PSDdiff1;
+int PSDdiff2;
 
 /********ENCODER for estimating current speed********/
 float SpeedL, SpeedR;
@@ -280,14 +290,14 @@ void SONAR(){
 	  diff2 = distance1 - distance2;
 
 
-	  diff_w1 = (diff1/7)*(diff1/7)*(diff1/7) + diff1; 	  //(x/10)^3 +x);
-	  diff_w2 = (diff2/7)*(diff2/7)*(diff2/7) + diff2;
+	  diff_w1 = (diff1/15)*(diff1/15)*(diff1/15) + diff1; 	  //(x/10)^3 +x);
+	  diff_w2 = (diff2/15)*(diff2/15)*(diff2/15) + diff2; //¿ø·¡ 10
 
 	  norm1 = ((float)diff_w1 - 0)/(400 - 0) * 1000;
 	  norm2 = ((float)diff_w2 - 0)/(400 - 0) * 1000;
 
-    n_v1 = norm1 + W1_MIN + FrontLPSD + DiaLPSD + SideLPSD; // Sonar + PSD + default Speed
-    n_v2 = norm2 + W2_MIN + FrontRPSD + DiaRPSD + SideRPSD;
+    n_v1 = norm1 + W1_MIN + PSDdiff1; // Sonar + PSD + default Speed
+    n_v2 = norm2 + W2_MIN + PSDdiff2;
 
     if(n_v1>1000)n_v1=1000;
     if(n_v2>1000)n_v2=1000;
@@ -299,12 +309,12 @@ void SONAR(){
 
 void PSD(){
 
-	if(adcval[0]<150) adcval[0]=150;
-	if(adcval[1]<150) adcval[1]=150;
-	if(adcval[2]<150) adcval[2]=150;
-	if(adcval[3]<150) adcval[3]=150;
-	if(adcval[4]<150) adcval[4]=150;
-	if(adcval[5]<150) adcval[5]=150;
+//	if(adcval[0]<200) adcval[0]=0;
+//	if(adcval[1]<200) adcval[1]=0;
+//	if(adcval[2]<200) adcval[2]=0;
+//	if(adcval[3]<200) adcval[3]=0;
+//	if(adcval[4]<200) adcval[4]=0;
+//	if(adcval[5]<200) adcval[5]=0;
 
 
 //	/**********PSD Analogue value to distance****************/
@@ -315,54 +325,74 @@ void PSD(){
 //	PSDR[1]= 144*exp(-0.002*adcval[4])-7;
 //	PSDR[2]= 144*exp(-0.002*adcval[5])-7;
 
-	PSDL[0]=adcval[0];
-	PSDL[1]=adcval[1];
-	PSDL[2]=adcval[2];
-	PSDR[0]=adcval[3];
-	PSDR[1]=adcval[4];
-	PSDR[2]=adcval[5];
+	//val = (tau*pre_val + ts*x)/(tau + ts); //LPF
+
+
+	PSDL[0]=adcval[0];//(tau*PrePSDL[0] + ts*adcval[0])/(tau + ts);
+	PSDL[1]=adcval[1];//(tau*PrePSDL[1] + ts*adcval[1])/(tau + ts);//adcval[1];
+	PSDL[2]=adcval[2];//(tau*PrePSDL[2] + ts*adcval[2])/(tau + ts);//adcval[2];
+	PSDR[0]=adcval[3];//(tau*PrePSDR[0] + ts*adcval[3])/(tau + ts);//adcval[3];
+	PSDR[1]=adcval[4];//(tau*PrePSDR[1] + ts*adcval[4])/(tau + ts);//adcval[4];
+	PSDR[2]=adcval[5];//(tau*PrePSDR[2] + ts*adcval[5])/(tau + ts);//adcval[5];
 
 	/**************PSD NORMALIZATION****************/
-	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;	//PSD Front
-	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;
+	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;
 
-	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Diagonal
-	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
+	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;
 
-	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;	//PSD Side
-	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*100;
+	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*200;	//PSD Side
+	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*200;
+
+	/********Sum of PSD for Left and Right**********/
+	PSDLeft = FrontLPSD + DiaLPSD + SideLPSD;
+	PSDRight = FrontRPSD + DiaRPSD + SideRPSD;
+
+	/*********Differences between Left and Right PSD values*********/
+	PSDdiff1 = PSDLeft - PSDRight;
+	PSDdiff2 = PSDRight - PSDLeft;
+
+
+
 }
 
 void PSD_Bluetooth(){
 
   	itoa(PSDL[0], Buf1, 10);
-  	SCI_OutChar('Q');
+  	SCI_OutChar('F');
+  	SCI_OutChar('L');
   	SCI_OutString(Buf1);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
   	itoa(PSDL[1], Buf2, 10);
-  	SCI_OutChar('W');
+  	SCI_OutChar('F');
+  	SCI_OutChar('R');
   	SCI_OutString(Buf2);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
   	itoa(PSDL[2], Buf3, 10);
-  	SCI_OutChar('E');
+  	SCI_OutChar('D');
+  	  	SCI_OutChar('L');
   	SCI_OutString(Buf3);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-  	itoa(PSDR[0], Buf4, 10);
-  	SCI_OutChar('A');
-  	SCI_OutString(Buf4);
-  	HAL_UART_Transmit(&huart3,&space,1,10);
-
-  	itoa(PSDR[1], Buf5, 10);
-  	SCI_OutChar('S');
-  	SCI_OutString(Buf5);
-  	HAL_UART_Transmit(&huart3,&space,1,10);
-
-  	itoa(PSDR[2], Buf6, 10);
-  	SCI_OutChar('D');
-  	SCI_OutString(Buf6);
+//  	itoa(PSDR[0], Buf4, 10);
+//  	SCI_OutChar('D');
+//  	  	SCI_OutChar('R');
+//  	SCI_OutString(Buf4);
+//  	HAL_UART_Transmit(&huart3,&space,1,10);
+//
+//  	itoa(PSDR[1], Buf5, 10);
+//  	SCI_OutChar('S');
+//  	  	SCI_OutChar('L');
+//  	SCI_OutString(Buf5);
+//  	HAL_UART_Transmit(&huart3,&space,1,10);
+//
+//  	itoa(PSDR[2], Buf6, 10);
+//  	SCI_OutChar('S');
+//  	  	SCI_OutChar('R');
+//  	SCI_OutString(Buf6);
 
   	HAL_UART_Transmit(&huart3,&enter1,1,10);
   	HAL_UART_Transmit(&huart3,&enter2,1,10);
@@ -408,11 +438,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 		if(encoderL<1)encoderL=0;
 		if(encoderR<1)encoderR=0;
 
-		PSD();
+		  PSD();
+	//	PSD_Bluetooth();
+		//Bluetooth(distance1,distance2,n_v1,n_v2);
 		if(Mode_Bluetooth==1) {
 			TIM3->CCR1=0;
 			TIM3->CCR2=0;
-			Bluetooth(distance1,distance2,n_v1,n_v2);
+	//		Bluetooth(distance1,distance2,n_v1,n_v2);
 			PSD_Bluetooth();
 
 		}
@@ -562,6 +594,7 @@ int main(void)
 
   while (1)
   {
+
 	  SONAR();
 
 	  if(Mode_Bluetooth==0){
