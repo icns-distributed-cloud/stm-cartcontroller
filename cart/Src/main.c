@@ -101,8 +101,8 @@ int norm1,norm2;
 int diff1,diff2;											            // For Normalization
 int diff_w1, diff_w2;
 
-#define W1_MIN 600														// Left_Motor Initial Velocity
-#define W2_MIN 600														// Right_Motor Initial Velocity
+#define W1_MIN 550														// Left_Motor Initial Velocity
+#define W2_MIN 550														// Right_Motor Initial Velocity
 #define RANGE_MAX 60
 
 /**********Encoder Normalization*********/
@@ -307,20 +307,29 @@ void SONAR(){
 
     if(n_v1>1000)n_v1=1000;
     if(n_v2>1000)n_v2=1000;
-    if(n_v1<-1000)n_v1= -1000;
-    if(n_v2<-1000)n_v2= -1000;
+    if(n_v1<-500)n_v1= (-500);
+    if(n_v2<-500)n_v2= (-500);
 
 
 }
 
 void PSD(){
 
+<<<<<<< HEAD
 	if(adcval[0]<350) adcval[0]=0;
 	if(adcval[1]<350) adcval[1]=0;
 	if(adcval[2]<350) adcval[2]=0;
 	if(adcval[3]<350) adcval[3]=0;
 	if(adcval[4]<350) adcval[4]=0;
 	if(adcval[5]<350) adcval[5]=0;
+=======
+//	if(adcval[0]<200) adcval[0]=0;
+//	if(adcval[1]<200) adcval[1]=0;
+//	if(adcval[2]<200) adcval[2]=0;
+//	if(adcval[3]<200) adcval[3]=0;
+//	if(adcval[4]<200) adcval[4]=0;
+//	if(adcval[5]<200) adcval[5]=0;
+>>>>>>> parent of ba703b5... Update Avoiding unexpected obstacles algorithm
 
 
 //	/**********PSD Analogue value to distance****************/
@@ -355,7 +364,7 @@ void PSD(){
 //	/****************Weight NORMALIZATION*******************/
 //	NORMFrontLPSD = (x/300)^3 +x);
 
-	NormFrontLPSD = (FrontLPSD/20)*(FrontLPSD/10)*(FrontLPSD/20) + FrontLPSD;
+	NormFrontLPSD = (FrontLPSD/20)*(FrontLPSD/20)*(FrontLPSD/20) + FrontLPSD;
 	NormFrontRPSD = (FrontRPSD/20)*(FrontRPSD/20)*(FrontRPSD/20) + FrontRPSD;
 
 	NormDiaLPSD =  (DiaLPSD/20)*(DiaLPSD/20)*(DiaLPSD/20) + DiaLPSD;
@@ -448,19 +457,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 		TIM2->CNT=0;
 		encoderR = TIM4->CNT;
 		TIM4->CNT=0;
-//
-		if(encoderL>10000) encoderL= encoderL - 65536;
-		if(encoderR>10000) encoderR= encoderR - 65536;
-//		if(encoderL>150)encoderL=150;
-//		if(encoderR>150)encoderR=150;
-//		if(encoderL<-150)encoderL= -150;
-//		if(encoderR<-150)encoderR= -150;
+
+		if(encoderL>150)encoderL=150;
+		if(encoderR>150)encoderR=150;
+		if(encoderL<-150)encoderL= -150;
+		if(encoderR<-150)encoderR= -150;
 
 		  PSD();
 	//	PSD_Bluetooth();
 		//Bluetooth(distance1,distance2,n_v1,n_v2);
-
-	//	  Bluetooth(n_v1,n_v2,Motor_Signal_L,Motor_Signal_R);
 
 
 		if(Mode_Bluetooth==1) {
@@ -511,27 +516,10 @@ void PID(int x,int y,int m,int n) {          // PID 제어 함수
 	Motor_Signal_R = RKP * TermP_R + RKI * TermI_R + RKD*TermD_R + Old_Motor_R;
 
 	/*****여기는 잠깐보류******/
-	if (x>0 && y>0){
-		if(Motor_Signal_L<100) Motor_Signal_L= 100; //400
-		if(Motor_Signal_L>1000) Motor_Signal_L=1000; //여기바꿈
-		if(Motor_Signal_R<100) Motor_Signal_R= 100; //300
-		if(Motor_Signal_R>1000) Motor_Signal_R=1000;
-	}
-
-	if(x<0){
-	if(Motor_Signal_L<-1000) Motor_Signal_L= -1000; //400
-	if(Motor_Signal_L>-100) Motor_Signal_L=-100; //여기바꿈
-	if(Motor_Signal_R>1000) Motor_Signal_R= 1000; //300
-	if(Motor_Signal_R<100) Motor_Signal_R=100;
-	}
-
-	if(y<0){
-	if(Motor_Signal_L>1000) Motor_Signal_L= 1000; //400
-	if(Motor_Signal_L<100) Motor_Signal_L= 100; //여기바꿈
-	if(Motor_Signal_R<-1000) Motor_Signal_R= -1000; //300
-	if(Motor_Signal_R>-100) Motor_Signal_R=-100;
-	}
-
+	if(Motor_Signal_L<-600) Motor_Signal_L= -600; //400
+	if(Motor_Signal_L>1000) Motor_Signal_L=1000; //여기바꿈
+	if(Motor_Signal_R<-600) Motor_Signal_R= -600; //300
+	if(Motor_Signal_R>1000) Motor_Signal_R=1000;
 
 	Old_Error_L = Error_L;
 	Old_Error_R = Error_R;
