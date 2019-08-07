@@ -101,8 +101,8 @@ int norm1,norm2;
 int diff1,diff2;											            // For Normalization
 int diff_w1, diff_w2;
 
-#define W1_MIN 550														// Left_Motor Initial Velocity
-#define W2_MIN 550														// Right_Motor Initial Velocity
+#define W1_MIN 600														// Left_Motor Initial Velocity
+#define W2_MIN 600														// Right_Motor Initial Velocity
 #define RANGE_MAX 60
 
 /**********Encoder Normalization*********/
@@ -118,7 +118,7 @@ int NocoderR;
 volatile uint32_t distance1 , distance2, distance3;
 
 /***************PSD Normalization********************/
-#define PSD_MIN 200
+#define PSD_MIN 0
 #define PSD_MAX 900
 uint16_t adcval[6];
 uint16_t PSDL[3];
@@ -139,6 +139,8 @@ int NormFrontLPSD;
 int NormFrontRPSD;
 int NormDiaLPSD;
 int NormDiaRPSD;
+int NormSideLPSD;
+int NormSideRPSD;
 
 
 /********ENCODER for estimating current speed********/
@@ -295,9 +297,8 @@ void SONAR(){
 	  diff1 = distance2 - distance1;
 	  diff2 = distance1 - distance2;
 
-
-	  diff_w1 = (diff1/15)*(diff1/15)*(diff1/15) + diff1; 	  //(x/10)^3 +x);
-	  diff_w2 = (diff2/15)*(diff2/15)*(diff2/15) + diff2; //원래 10
+	  diff_w1 = (diff1/40)*(diff1/40)*(diff1/40) + diff1; 	  //(x/10)^3 +x);
+	  diff_w2 = (diff2/40)*(diff2/40)*(diff2/40) + diff2; //원래 10
 
 	  norm1 = ((float)diff_w1 - 0)/(400 - 0) * 1000;
 	  norm2 = ((float)diff_w2 - 0)/(400 - 0) * 1000;
@@ -307,30 +308,18 @@ void SONAR(){
 
     if(n_v1>1000)n_v1=1000;
     if(n_v2>1000)n_v2=1000;
-    if(n_v1<-500)n_v1= (-500);
-    if(n_v2<-500)n_v2= (-500);
-
+    if(n_v1<-1000)n_v1= -1000;
+    if(n_v2<-1000)n_v2= -1000;
 
 }
 
 void PSD(){
-
-<<<<<<< HEAD
 	if(adcval[0]<350) adcval[0]=0;
 	if(adcval[1]<350) adcval[1]=0;
 	if(adcval[2]<350) adcval[2]=0;
 	if(adcval[3]<350) adcval[3]=0;
 	if(adcval[4]<350) adcval[4]=0;
 	if(adcval[5]<350) adcval[5]=0;
-=======
-//	if(adcval[0]<200) adcval[0]=0;
-//	if(adcval[1]<200) adcval[1]=0;
-//	if(adcval[2]<200) adcval[2]=0;
-//	if(adcval[3]<200) adcval[3]=0;
-//	if(adcval[4]<200) adcval[4]=0;
-//	if(adcval[5]<200) adcval[5]=0;
->>>>>>> parent of ba703b5... Update Avoiding unexpected obstacles algorithm
-
 
 //	/**********PSD Analogue value to distance****************/
 //	PSDL[0]= 144*exp(-0.002*adcval[0])-7; //L 1,4,7
@@ -340,46 +329,44 @@ void PSD(){
 //	PSDR[1]= 144*exp(-0.002*adcval[4])-7;
 //	PSDR[2]= 144*exp(-0.002*adcval[5])-7;
 
-	//val = (tau*pre_val + ts*x)/(tau + ts); //LPF
-
-
-	PSDL[0]=adcval[0];//(tau*PrePSDL[0] + ts*adcval[0])/(tau + ts);
-	PSDL[1]=adcval[1];//(tau*PrePSDL[1] + ts*adcval[1])/(tau + ts);//adcval[1];
-	PSDL[2]=adcval[2];//(tau*PrePSDL[2] + ts*adcval[2])/(tau + ts);//adcval[2];
-	PSDR[0]=adcval[3];//(tau*PrePSDR[0] + ts*adcval[3])/(tau + ts);//adcval[3];
-	PSDR[1]=adcval[4];//(tau*PrePSDR[1] + ts*adcval[4])/(tau + ts);//adcval[4];
-	PSDR[2]=adcval[5];//(tau*PrePSDR[2] + ts*adcval[5])/(tau + ts);//adcval[5];
+	PSDL[0]=adcval[0];
+	PSDL[1]=adcval[1];
+	PSDL[2]=adcval[2];
+	PSDR[0]=adcval[3];
+	PSDR[1]=adcval[4];
+	PSDR[2]=adcval[5];
 
 	/**************PSD NORMALIZATION****************/
-	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;	//PSD Front
-	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;
+	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
 
-	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;	//PSD Diagonal
-	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;
+	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
 
 	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Side
 	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
 
-
-//	/****************Weight NORMALIZATION*******************/
-//	NORMFrontLPSD = (x/300)^3 +x);
-
-	NormFrontLPSD = (FrontLPSD/20)*(FrontLPSD/20)*(FrontLPSD/20) + FrontLPSD;
-	NormFrontRPSD = (FrontRPSD/20)*(FrontRPSD/20)*(FrontRPSD/20) + FrontRPSD;
-
-	NormDiaLPSD =  (DiaLPSD/20)*(DiaLPSD/20)*(DiaLPSD/20) + DiaLPSD;
-	NormDiaRPSD = (DiaRPSD/20)*(DiaRPSD/20)*(DiaRPSD/20) + DiaRPSD;
-
+////	/****************Weight NORMALIZATION*******************/
+////	NORMFrontLPSD = (x/300)^3 +x);
+//
+//	NormFrontLPSD = (FrontLPSD/40)*(FrontLPSD/40)*(FrontLPSD/40) + FrontLPSD;
+//	NormFrontRPSD = (FrontRPSD/40)*(FrontRPSD/40)*(FrontRPSD/40) + FrontRPSD;
+//
+//	NormDiaLPSD =  (DiaLPSD/40)*(DiaLPSD/40)*(DiaLPSD/40) + DiaLPSD;
+//	NormDiaRPSD = (DiaRPSD/40)*(DiaRPSD/40)*(DiaRPSD/40) + DiaRPSD;
+//
+//	NormSideLPSD = (SideLPSD/40)*(SideLPSD/40)*(SideLPSD/40) + SideLPSD;
+//	NormSideRPSD = (SideRPSD/40)*(SideRPSD/40)*(SideRPSD/40) + SideRPSD;
 
 	/********Sum of PSD for Left and Right**********/
-	PSDLeft = NormFrontLPSD + NormDiaLPSD + SideLPSD;
-	PSDRight = NormFrontRPSD + NormDiaRPSD + SideRPSD;
+//	PSDLeft = NormFrontLPSD + NormDiaLPSD + NormSideLPSD;
+//	PSDRight = NormFrontRPSD + NormDiaRPSD + NormSideRPSD;
+	PSDLeft = FrontLPSD + DiaLPSD + SideLPSD;
+	PSDRight = FrontRPSD + DiaRPSD + SideRPSD;
 
 	/*********Differences between Left and Right PSD values*********/
 	PSDdiff1 = PSDLeft - PSDRight; // (x/10)^3 +x);
 	PSDdiff2 = PSDRight - PSDLeft;
-
-
 }
 
 void PSD_Bluetooth(){
@@ -449,8 +436,9 @@ void Bluetooth(int first, int second, int third, int forth){
 
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt every 20ms
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	/***********Every 20ms, this function called*************/
 
 	if(htim->Instance == TIM6){
 		encoderL = TIM2->CNT;
@@ -458,16 +446,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 		encoderR = TIM4->CNT;
 		TIM4->CNT=0;
 
-		if(encoderL>150)encoderL=150;
-		if(encoderR>150)encoderR=150;
-		if(encoderL<-150)encoderL= -150;
-		if(encoderR<-150)encoderR= -150;
+		/****************Encoder Range********************/
+		if(encoderL>10000) encoderL= encoderL - 65536;
+		if(encoderR>10000) encoderR= encoderR - 65536;
 
+		if(encoderL>150 && encoderL<10000) encoderL=150;
+		if(encoderR>150 && encoderR<10000) encoderR=150;
+		if(encoderL<-150) encoderL= -150;
+		if(encoderR<-150) encoderR= -150;
+
+		/*************PSD******************/
 		  PSD();
-	//	PSD_Bluetooth();
-		//Bluetooth(distance1,distance2,n_v1,n_v2);
 
-
+		/***********Bluetooth Mode**************/
 		if(Mode_Bluetooth==1) {
 			TIM3->CCR1=0;
 			TIM3->CCR2=0;
@@ -516,10 +507,34 @@ void PID(int x,int y,int m,int n) {          // PID 제어 함수
 	Motor_Signal_R = RKP * TermP_R + RKI * TermI_R + RKD*TermD_R + Old_Motor_R;
 
 	/*****여기는 잠깐보류******/
-	if(Motor_Signal_L<-600) Motor_Signal_L= -600; //400
-	if(Motor_Signal_L>1000) Motor_Signal_L=1000; //여기바꿈
-	if(Motor_Signal_R<-600) Motor_Signal_R= -600; //300
-	if(Motor_Signal_R>1000) Motor_Signal_R=1000;
+	if (x>0 && y>0){
+		if(Motor_Signal_L<100) Motor_Signal_L= 100; //400
+		if(Motor_Signal_L>1000) Motor_Signal_L=1000;
+		if(Motor_Signal_R<100) Motor_Signal_R= 100; //300
+		if(Motor_Signal_R>1000) Motor_Signal_R=1000;
+	}
+
+	else if(x<0 && y>0){
+	if(Motor_Signal_L<-1000) Motor_Signal_L= -1000;
+	if(Motor_Signal_L>-100) Motor_Signal_L=-100;
+	if(Motor_Signal_R>1000) Motor_Signal_R= 1000;
+	if(Motor_Signal_R<100) Motor_Signal_R=100;
+	}
+
+	else if(x>0 && y<0){
+	if(Motor_Signal_L>1000) Motor_Signal_L= 1000;
+	if(Motor_Signal_L<100) Motor_Signal_L= 100;
+	if(Motor_Signal_R<-1000) Motor_Signal_R= -1000;
+	if(Motor_Signal_R>-100) Motor_Signal_R=-100;
+	}
+
+	else if(x<0 && y<0){
+		if(Motor_Signal_L<-1000) Motor_Signal_L= -1000;
+		if(Motor_Signal_L>-100) Motor_Signal_L= -100;
+		if(Motor_Signal_R<-1000) Motor_Signal_R= -1000;
+		if(Motor_Signal_R>-100) Motor_Signal_R=-100;
+	}
+
 
 	Old_Error_L = Error_L;
 	Old_Error_R = Error_R;
