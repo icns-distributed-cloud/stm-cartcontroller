@@ -315,12 +315,12 @@ void SONAR(){
 
 void PSD(){
 
-	if(adcval[0]<200) adcval[0]=0;
-	if(adcval[1]<200) adcval[1]=0;
-	if(adcval[2]<200) adcval[2]=0;
-	if(adcval[3]<200) adcval[3]=0;
-	if(adcval[4]<200) adcval[4]=0;
-	if(adcval[5]<200) adcval[5]=0;
+	if(adcval[0]<350) adcval[0]=0;
+	if(adcval[1]<350) adcval[1]=0;
+	if(adcval[2]<350) adcval[2]=0;
+	if(adcval[3]<350) adcval[3]=0;
+	if(adcval[4]<350) adcval[4]=0;
+	if(adcval[5]<350) adcval[5]=0;
 
 
 //	/**********PSD Analogue value to distance****************/
@@ -399,16 +399,16 @@ void PSD_Bluetooth(){
   	SCI_OutString(Buf4);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-//  	itoa(PSDR[1], Buf5, 10);
-//  	SCI_OutChar('S');
-//  	  	SCI_OutChar('L');
-//  	SCI_OutString(Buf5);
-//  	HAL_UART_Transmit(&huart3,&space,1,10);
-//
-//  	itoa(PSDR[2], Buf6, 10);
-//  	SCI_OutChar('S');
-//  	  	SCI_OutChar('R');
-//  	SCI_OutString(Buf6);
+  	itoa(PSDR[1], Buf5, 10);
+  	SCI_OutChar('S');
+  	  	SCI_OutChar('L');
+  	SCI_OutString(Buf5);
+  	HAL_UART_Transmit(&huart3,&space,1,10);
+
+  	itoa(PSDR[2], Buf6, 10);
+  	SCI_OutChar('S');
+  	  	SCI_OutChar('R');
+  	SCI_OutString(Buf6);
 
   	HAL_UART_Transmit(&huart3,&enter1,1,10);
   	HAL_UART_Transmit(&huart3,&enter2,1,10);
@@ -467,7 +467,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 			TIM3->CCR1=0;
 			TIM3->CCR2=0;
 			Bluetooth(n_v1,n_v2,Motor_Signal_L,Motor_Signal_R);
-		//	PSD_Bluetooth();
+			PSD_Bluetooth();
 
 		}
 
