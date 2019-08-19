@@ -89,6 +89,14 @@
 #define BOOT1_GPIO_Port GPIOB
 #define CLK_IN_Pin GPIO_PIN_10
 #define CLK_IN_GPIO_Port GPIOB
+#define LED_F_Pin GPIO_PIN_12
+#define LED_F_GPIO_Port GPIOB
+#define LED_B_Pin GPIO_PIN_13
+#define LED_B_GPIO_Port GPIOB
+#define LED_L_Pin GPIO_PIN_14
+#define LED_L_GPIO_Port GPIOB
+#define LED_R_Pin GPIO_PIN_15
+#define LED_R_GPIO_Port GPIOB
 #define I2S3_MCK_Pin GPIO_PIN_7
 #define I2S3_MCK_GPIO_Port GPIOC
 #define VBUS_FS_Pin GPIO_PIN_9

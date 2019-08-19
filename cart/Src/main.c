@@ -95,9 +95,9 @@
 // author          : Je Hyeon Yu, Ji Hoo Chun, Yun Hwan Kim.
 // date            : 20190807
 // version         : 0.3
-// TrueSTUDIO	   : 9.3.0
+// TrueSTUDIO       : 9.3.0
 // notes           : This stm cart controller is an implementation of a cart controller for
-//					 self-driving in the C Programming Language.
+//                     self-driving in the C Programming Language.
 // ==============================================================================
 #include <stdlib.h>
 #include <math.h>
@@ -134,6 +134,9 @@ uint8_t Mode_Bluetooth;
 float ts=50; //50Hz -> 20ms
 float tau=0.001; // constant value for LPF
 
+/**********Direction Order*******************/
+int TurnLeft;
+int TurnRight;
 
 /********VELOCITY NORMALIZATION********/
 int n_v1, n_v2; 												// Normalized Velocity Value
@@ -159,7 +162,7 @@ volatile uint32_t distance1 , distance2, distance3;
 
 /***************PSD Normalization********************/
 #define PSD_MIN 0
-#define PSD_MAX 900
+#define PSD_MAX 1000
 uint16_t adcval[6];
 uint16_t PSDL[3];
 uint16_t PSDR[3];
@@ -337,29 +340,34 @@ void SONAR(){
 	  diff1 = distance2 - distance1;
 	  diff2 = distance1 - distance2;
 
-	  diff_w1 = (diff1/40)*(diff1/40)*(diff1/40) + diff1; 	  //(x/10)^3 +x);
-	  diff_w2 = (diff2/40)*(diff2/40)*(diff2/40) + diff2; //원래 10
+	  diff_w1 = (diff1/15)*(diff1/15)*(diff1/15) + diff1; 	  //(x/10)^3 +x);
+	  diff_w2 = (diff2/15)*(diff2/15)*(diff2/15) + diff2; //원래 10
 
 	  norm1 = ((float)diff_w1 - 0)/(400 - 0) * 1000;
 	  norm2 = ((float)diff_w2 - 0)/(400 - 0) * 1000;
+
+	//  if(norm1>1000) norm1 = 1000;
+	  if(norm1<-500) norm1 = -500;
+	//  if(norm2>1000) norm2 = 1000;
+	  if(norm2<-500) norm2 = -500;
 
     n_v1 = norm1 + W1_MIN + PSDdiff1; // Sonar + PSD + default Speed
     n_v2 = norm2 + W2_MIN + PSDdiff2;
 
     if(n_v1>1000)n_v1=1000;
     if(n_v2>1000)n_v2=1000;
-    if(n_v1<-1000)n_v1= -1000;
-    if(n_v2<-1000)n_v2= -1000;
+    if(n_v1<-700)n_v1= -700;
+    if(n_v2<-700)n_v2= -700;
 
 }
 
 void PSD(){
-	if(adcval[0]<350) adcval[0]=0;
-	if(adcval[1]<350) adcval[1]=0;
-	if(adcval[2]<350) adcval[2]=0;
-	if(adcval[3]<350) adcval[3]=0;
-	if(adcval[4]<350) adcval[4]=0;
-	if(adcval[5]<350) adcval[5]=0;
+	if(adcval[0]<200) adcval[0]=0;
+	if(adcval[1]<200) adcval[1]=0;
+	if(adcval[2]<200) adcval[2]=0;
+	if(adcval[3]<200) adcval[3]=0;
+	if(adcval[4]<200) adcval[4]=0;
+	if(adcval[5]<200) adcval[5]=0;
 
 //	/**********PSD Analogue value to distance****************/
 //	PSDL[0]= 144*exp(-0.002*adcval[0])-7; //L 1,4,7
@@ -377,11 +385,11 @@ void PSD(){
 	PSDR[2]=adcval[5];
 
 	/**************PSD NORMALIZATION****************/
-	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Front
-	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
+	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;
 
-	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Diagonal
-	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
+	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*600;
 
 	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Side
 	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
@@ -407,29 +415,34 @@ void PSD(){
 	/*********Differences between Left and Right PSD values*********/
 	PSDdiff1 = PSDLeft - PSDRight; // (x/10)^3 +x);
 	PSDdiff2 = PSDRight - PSDLeft;
+
+//	/************different weight value depending on percentage**********/
+//	PSDSpeedL = (float)PSDdiff1/1000 * 100 ;
+//	PSDSpeedR = (float)PSDdiff2/1000 * 100 ;
+
 }
 
 void PSD_Bluetooth(){
 
-  	itoa(NormDiaLPSD, Buf1, 10);
+  	itoa(PSDL[0], Buf1, 10);
   	SCI_OutChar('F');
   	SCI_OutChar('L');
   	SCI_OutString(Buf1);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-  	itoa(NormDiaRPSD, Buf2, 10);
+  	itoa(PSDL[1], Buf2, 10);
   	SCI_OutChar('F');
   	SCI_OutChar('R');
   	SCI_OutString(Buf2);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-  	itoa(PSDLeft, Buf3, 10);
+  	itoa(PSDL[2], Buf3, 10);
   	SCI_OutChar('D');
   	  	SCI_OutChar('L');
   	SCI_OutString(Buf3);
   	HAL_UART_Transmit(&huart3,&space,1,10);
 
-  	itoa(PSDRight, Buf4, 10);
+  	itoa(PSDR[0], Buf4, 10);
   	SCI_OutChar('D');
   	  	SCI_OutChar('R');
   	SCI_OutString(Buf4);
@@ -502,7 +515,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		if(Mode_Bluetooth==1) {
 			TIM3->CCR1=0;
 			TIM3->CCR2=0;
-			Bluetooth(n_v1,n_v2,Motor_Signal_L,Motor_Signal_R);
+		//	Bluetooth(n_v1,n_v2,norm1,norm2);
 			PSD_Bluetooth();
 
 		}
@@ -546,6 +559,8 @@ void PID(int x,int y,int m,int n) {          // PID 제어 함수
 	Motor_Signal_L = LKP * TermP_L + LKI * TermI_L + LKD*TermD_L + Old_Motor_L;
 	Motor_Signal_R = RKP * TermP_R + RKI * TermI_R + RKD*TermD_R + Old_Motor_R;
 
+
+
 	/*****여기는 잠깐보류******/
 	if (x>0 && y>0){
 		if(Motor_Signal_L<100) Motor_Signal_L= 100; //400
@@ -575,13 +590,29 @@ void PID(int x,int y,int m,int n) {          // PID 제어 함수
 		if(Motor_Signal_R>-100) Motor_Signal_R=-100;
 	}
 
-
 	Old_Error_L = Error_L;
 	Old_Error_R = Error_R;
 
-
 	Old_Motor_L= Motor_Signal_L;
 	Old_Motor_R= Motor_Signal_R;
+
+
+//	for(int i=0; Motor_Signal_L>Old_Motor_L ; i+=30 ){
+//
+//		}
+//
+//	for(int i=0; Motor_Signal_R>Old_Motor_R ; i+=30 ){
+//			TIM3->CCR2 = Motor_Signal_R + i;
+//		}
+//
+//	for(int i=0; Motor_Signal_L<Old_Motor_L ; i-=30 ){
+//			TIM3->CCR1 = Motor_Signal_L + i;
+//		}
+//
+//	for(int i=0; Motor_Signal_R<Old_Motor_R ; i-=30 ){
+//			TIM3->CCR2 = Motor_Signal_R + i;
+//		}
+
 
 
 	if(Motor_Signal_L>0){
@@ -593,17 +624,20 @@ void PID(int x,int y,int m,int n) {          // PID 제어 함수
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, SET);
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, RESET);
 	}
+
 	if(Motor_Signal_L<0){
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, RESET);
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, SET);
 		  Motor_Signal_L = (-1)*Motor_Signal_L;
 	}
+
 	if(Motor_Signal_R<0){
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, RESET);
 		  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
 		  Motor_Signal_R = (-1) * Motor_Signal_R;
 	}
 
+//	(Motor_Signal_L - Old_Motor_L)/3 + Motor_Signal_L;a
 
 	TIM3->CCR1 = Motor_Signal_L; //actual PWM for motor
 	TIM3->CCR2 = Motor_Signal_R;
@@ -669,6 +703,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 
+
   /************** PWN for SONAR***************/
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);//left
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);//right
@@ -700,8 +735,10 @@ int main(void)
 
   Mode_Bluetooth=0;
 
+
   while (1)
   {
+
 
 	  SONAR();
 
@@ -807,10 +844,17 @@ static void MX_NVIC_Init(void)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
  {
+
 	char g='g';
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, RESET);
+	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, RESET); //LED Left On
+	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, RESET);
+	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, RESET);
+	 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, RESET);
 
 	 if(huart->Instance == USART3){
 
+//		 HAL_UART_Transmit(&huart3,&g,1,10);
 		 HAL_UART_Receive_IT(&huart3,&rx,1);
 
 		 if(rx=='b'){
@@ -819,6 +863,88 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		 }
 
 		 if(rx=='m') Mode_Bluetooth=0;
+
+		 	 /**********Direction Forward*************/
+		 	 if(rx=='w'){
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, SET); //LED Front On
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, RESET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, RESET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, RESET);
+
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, SET); //left wheel
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, RESET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, SET); //right wheel
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, RESET);
+				  TIM3->CCR1 = 600;
+				  TIM3->CCR2 = 600;
+		 	 }
+
+		 	 /*************Direction Backward*****************/
+		 	 if(rx=='s'){
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, RESET); //LED Back On
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, SET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, RESET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, RESET);
+
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, RESET); //left wheel
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, SET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, RESET); //right wheel
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
+				  TIM3->CCR1 = 600;
+				  TIM3->CCR2 = 600;
+		 	 }
+
+		 	 /************Turn Left**************/
+		 	 if(rx=='a'){
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, RESET); //LED Left On
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, RESET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, SET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, RESET);
+
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, RESET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, SET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, SET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, RESET);
+				  TIM3->CCR1 = 1000;
+				  TIM3->CCR2 = 1000;
+		 	 }
+
+		 	 /*********Turn Right***********/
+		 	 if(rx=='d'){
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, RESET); //LED Right On
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, RESET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, RESET);
+				 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, SET);
+
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, SET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, RESET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, RESET);
+				  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
+				  TIM3->CCR1 = 1000;
+				  TIM3->CCR2 = 900;
+		 	 }
+
+		 	 /*********Go Forward**********/
+		 	 if(rx==13){
+				  TIM3->CCR1 = 600;
+				  TIM3->CCR2 = 600;
+		 	 }
+
+		 	 /******STOP*******/
+		 	 if(rx==32){
+
+				  TIM3->CCR1 = 0;
+				  TIM3->CCR2 = 0;
+
+				  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_5, SET);
+
+					 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, SET); // All LEDs On
+					 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, SET);
+					 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, SET);
+					 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, SET);
+
+		 	 }
+
 
 	 }
 //		  HAL_UART_Transmit(&huart3, &g, 1, 10);
