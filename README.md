@@ -1,4 +1,6 @@
 # STM-based Self-Driving Cart Controller 
+### BSD 3-Clause License
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
 
 ## 1. Development project setup
 * Step 1. Share a CubeMX file
@@ -19,8 +21,3 @@
 * Step 5. Git commit
 * Step 6. Push the branch
 * Step 7. Make "Pull request"
-
-## BSD
-### BSD 3-Clause License
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
-`[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)`
