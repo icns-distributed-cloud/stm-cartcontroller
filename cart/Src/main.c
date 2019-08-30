@@ -89,21 +89,14 @@ char rx;
 
 uint8_t Mode_Bluetooth;
 
-
-/************Low PassFilter**************/
-float ts=50; //50Hz -> 20ms
-float tau=0.001; // constant value for LPF
-
-
 /********VELOCITY NORMALIZATION********/
+int W1_MIN = 600;														// Left_Motor Initial Velocity
+int W2_MIN = 600;														// Right_Motor Initial Velocity
+#define RANGE_MAX 60
 int n_v1, n_v2; 												// Normalized Velocity Value
 int norm1,norm2;
 int diff1,diff2;											            // For Normalization
 int diff_w1, diff_w2;
-
-#define W1_MIN 600														// Left_Motor Initial Velocity
-#define W2_MIN 600														// Right_Motor Initial Velocity
-#define RANGE_MAX 60
 
 /**********Encoder Normalization*********/
 #define ENORM_MIN 0
@@ -111,72 +104,61 @@ int diff_w1, diff_w2;
 #define ERANGE_MAX 1000
 int NocoderL;
 int NocoderR;
+volatile int SPEED = 500;
 
 /**********SONAR NORMALIZATION*********/
 #define NORM_MIN 3														// Minimum Value of Sonar Sensor
 #define NORM_MAX 200													// Maximum Value of Sonar Sensor
-volatile uint32_t distance1 , distance2, distance3;
+volatile uint32_t distance1 , distance2, distance3, Ldistance, Rdistance;
+int SonarLMAX = 300 , SonarRMAX = 300;
 
 /***************PSD Normalization********************/
 #define PSD_MIN 0
 #define PSD_MAX 900
-uint16_t adcval[6];
+uint16_t adcval[10];
 uint16_t PSDL[3];
 uint16_t PSDR[3];
+uint16_t SPSDL[2];
+uint16_t SPSDR[2];
 uint16_t FrontLPSD;
 uint16_t FrontRPSD;
 uint16_t DiaLPSD;
 uint16_t DiaRPSD;
 uint16_t SideLPSD;
 uint16_t SideRPSD;
-
 uint16_t PSDLeft;
 uint16_t PSDRight;
-
-int Old_PSD_SumL = 5000;
-int Old_PSD_SumR = 5000;
-
-int DiffL;
-int DiffR;
-
 int PSDdiff1;
 int PSDdiff2;
 
-volatile int PSDflag = 0;
-volatile int PSDcount = 0;
+//for delay
+volatile int countmode =0;
+volatile int PSDcount =0;
+volatile int Flag = 0;
+volatile int Count = 0;
 
 /********ENCODER for estimating current speed********/
 float SpeedL, SpeedR;
-
 float Motor_Signal_L;
 float Motor_Signal_R;
-
 float Error_L=0;
 float Error_R=0;
-
 float Old_Error_L=0;
 float Old_Error_R=0;
-
 float Old_Motor_L;
 float Old_Motor_R;
 
 /************PID Control for cornering and avoiding obstacles*************/
+#define delta_t 0.02
 float TermP_L;
 float TermP_R;
-
 float TermI_L;
 float TermI_R;
-
 float TermD_L;
 float TermD_R;
-
-
-float KP=  0.009;//0.011;//0.18; //2;//0.02
-float KI=  0.005;//0.004;//0.09; //0;//0.01
-float KD=  0.0003;//0.0005;//0.007; //0;
-
-
-#define delta_t 0.02
+float KP=  0.005;//0.011;//0.18; //2;//0.02
+float KI=  0.0012;//0.004;//0.09; //0;//0.01
+float KD=  -0.00003;//0.0005;//0.007; //0;
 
 /***********FOR DELAY_US FUNC**********/
 #define Delay_ms     HAL_Delay
@@ -198,6 +180,8 @@ void MX_USB_HOST_Process(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+/******For Blue-tooth communication*******/
 void SCI_OutString(char *pt)
 {
   char letter;
@@ -211,6 +195,7 @@ void SCI_OutChar(char letter)
    HAL_UART_Transmit(&huart3,&letter, 1,10);
 }
 
+/*****************For Delay****************/
 uint32_t micros() {
   return (uwTick&0x3FFFFF)*1000 + (SYSTICK_LOAD-SysTick->VAL)/SYS_CLOCK;
 }
@@ -227,6 +212,9 @@ void Delay_us(uint32_t us) {
     else     temp = micros();
   }
 }
+
+
+/**************Ultra-sonic Sensor External Interrupt***********/
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) //External interrupt for Sonar
 {
 
@@ -234,10 +222,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) //External interrupt for Sonar
 
       switch(GPIO_Pin)
       {
-         /************left sonar*************/
+         //left sonar
          case GPIO_PIN_10:{
             static uint32_t ss1=0;
-            uint32_t temp1 = GPIOE->IDR & 0x0400;  //
+            uint32_t temp1 = GPIOE->IDR & 0x0400;
             switch (temp1) {
               case 0x0400:  // Rising
                  ss1 = micros();
@@ -249,10 +237,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) //External interrupt for Sonar
             }
             break;
          }
-         /***********right sonar************/
+         //right sonar
          case GPIO_PIN_12:{
                static uint32_t ss2=0;
-               uint32_t temp2 = GPIOE->IDR & 0x1000;  //
+               uint32_t temp2 = GPIOE->IDR & 0x1000;
 
                switch (temp2) {
                  case 0x1000 :  // Rising
@@ -265,46 +253,31 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) //External interrupt for Sonar
                      }
                break;
             }
-         /************front sonar***************/
-//         case GPIO_PIN_14:{
-//               static uint32_t ss3=0;
-//               uint32_t temp3 = GPIOE->IDR & 0x4000;  //
-//
-//               switch (temp3) {
-//                 case 0x4000 :  // Rising
-//                    ss3 = micros();
-//                    break;
-//
-//                 case 0x0000 :  // Falling
-//                    distance3 = (micros() - ss3) / 58;
-//                    break;
-//                     }
-//               break;
-//            }
       }
 
   }
 void SONAR(){
 
-	if(distance1>400) distance1=400;
+	////// Sonar Sensor Normalization
+	// limit min & max distance
+	if(distance1>SonarLMAX) distance1=SonarLMAX;
 	if(distance1<3) distance1=3;
-	if(distance2>400) distance2=400;
+	if(distance2>SonarRMAX) distance2=SonarRMAX;
 	if(distance2<3) distance2=3;
-	if(distance3>400) distance3=400;
-	if(distance3<3) distance3=3;
+
+	Ldistance = distance1;
+	Rdistance = distance2;
 
 	diff1 = distance2 - distance1;
 	diff2 = distance1 - distance2;
 
-	diff_w1 = (diff1/15)*(diff1/15)*(diff1/15) + diff1; 	  //(x/10)^3 +x);
-	diff_w2 = (diff2/15)*(diff2/15)*(diff2/15) + diff2; //원래 10
+	diff_w1 = (diff1/35)*(diff1/35)*(diff1/35) + diff1;//(x/10)^3 +x);
+	diff_w2 = (diff2/35)*(diff2/35)*(diff2/35) + diff2;
 
-	norm1 = ((float)diff_w1 - 0)/(400 - 0) * 1000;
-	norm2 = ((float)diff_w2 - 0)/(400 - 0) * 1000;
+    n_v1 = diff_w1 + W1_MIN + PSDdiff1; // Sonar + PSD + default Speed
+    n_v2 = diff_w2 + W2_MIN + PSDdiff2;
 
-    n_v1 = norm1 + W1_MIN + PSDdiff1; // Sonar + PSD + default Speed
-    n_v2 = norm2 + W2_MIN + PSDdiff2;
-
+    // limit min & max value.
     if(n_v1>1000)n_v1=1000;
     if(n_v2>1000)n_v2=1000;
     if(n_v1<1)n_v1=0;
@@ -314,12 +287,19 @@ void SONAR(){
 
 void PSD(){
 
-//	if(adcval[0]<400) adcval[0]=0;
-//	if(adcval[1]<400) adcval[1]=0;
-//	if(adcval[2]<400) adcval[2]=0;
-//	if(adcval[3]<400) adcval[3]=0;
-//	if(adcval[4]<400) adcval[4]=0;
-//	if(adcval[5]<400) adcval[5]=0;
+	////// PSD Sensor Normalization
+	//adcval[0]~adcval[5] = Long distance PSD
+	//adcval[6]~adcval[9] = Short distance PSD
+
+	//short distance PSD (Analogue to specific range of digital value)
+//	if (adcval[6]>700) adcval[6] = 1;
+//	else adcval[6] =0;
+//	if (adcval[7]>700) adcval[7] = 1;
+//		else adcval[7] =0;
+//	if (adcval[8]>700) adcval[8] = 1;
+//		else adcval[8] =0;
+//	if (adcval[9]>700) adcval[9] = 1;
+//		else adcval[9] =0;
 
 	PSDL[0]=adcval[0];
 	PSDL[1]=adcval[1];
@@ -328,48 +308,89 @@ void PSD(){
 	PSDR[1]=adcval[4];
 	PSDR[2]=adcval[5];
 
-	/**************PSD NORMALIZATION****************/
-	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Front
-	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
+	SPSDL[0]=adcval[6];
+	SPSDL[1]=adcval[7];
+	SPSDR[0]=adcval[8];
+	SPSDR[1]=adcval[9];
 
-	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*450;	//PSD Diagonal
-	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*450;
+	//PSD normalization
+	FrontLPSD = ((float)PSDL[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;	//PSD Front
+	FrontRPSD = ((float)PSDR[0]-PSD_MIN)/(PSD_MAX-PSD_MIN)*300;
 
-	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*500;	//PSD Side
-	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*500;
+	DiaLPSD = ((float)PSDL[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*350;	//PSD Diagonal
+	DiaRPSD = ((float)PSDR[1]-PSD_MIN)/(PSD_MAX-PSD_MIN)*350;
 
-	/********Sum of PSD for Left and Right**********/
+	SideLPSD = ((float)PSDL[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;	//PSD Side
+	SideRPSD = ((float)PSDR[2]-PSD_MIN)/(PSD_MAX-PSD_MIN)*400;
+
+	//sum of PSD for left and right
 	PSDLeft = FrontLPSD + DiaLPSD + SideLPSD;
 	PSDRight = FrontRPSD + DiaRPSD + SideRPSD;
 
-	/*********Differences between Left and Right PSD values*********/
+	//differences between left and right PSD values
 	PSDdiff1 = PSDLeft - PSDRight;
 	PSDdiff2 = PSDRight - PSDLeft;
 
-//	DiffL = (PSDdiff1/20)*(PSDdiff1/20)*(PSDdiff1/20);
-//	DiffR = (PSDdiff2/20)*(PSDdiff2/20)*(PSDdiff2/20);
-	/*********For Emergency Avoidance*********/
-	DiffL = (PSDL[0] + PSDL[1] + PSDL[2]) - Old_PSD_SumL;
-	DiffR = (PSDR[0] + PSDR[1] + PSDR[2]) - Old_PSD_SumR;
+}
+void Delay_DesiredSpeed(int x, int y)
+{
+	////// Maintain Desired Speed
+	//maintain a target speed for a certain period of time using external interrupt(1cycle = 20ms)
+	Flag = 1;
 
-	if(DiffL > 600 || DiffR > 600){
+	while(Count < 5){
+		n_v1 = x;
+		n_v2 = y;
+		PID(n_v1,n_v2,encoderL,encoderR);
+	}
 
-		PSDflag = 1;
+	Flag = 0;
+	Count = 0;
 
-		while(PSDcount < 100){
+}
+
+void Driving_Control(){
+
+	////// Obstacle avoidance driving
+	// Detect obstacle on the left side
+	if(SPSDL[0] || SPSDL[1]){
+
+		countmode=1;
+		// Break for 1sec
+		while(PSDcount < 50){
 			TIM3->CCR1 = 0;
 			TIM3->CCR2 = 0;
 		}
-		PSDflag = 0;
-		PSDcount = 0;
 
+		PSDcount=0;
+		countmode=0;
+
+		while(SPSDL[0] || SPSDL[1]){
+			Delay_DesiredSpeed(n_v1, n_v2);
+		}
 	}
-	Old_PSD_SumL = (PSDL[0] + PSDL[1] + PSDL[2]);
-	Old_PSD_SumR = (PSDR[0] + PSDR[1] + PSDR[2]);
 
-//	Old_PSD_SumL = PSDLeft;
-//	Old_PSD_SumR = PSDRight;
+	// Detect obstacle on the right side
+	if(SPSDR[0] || SPSDR[1]){
 
+		countmode=1;
+
+		// Break for 1sec
+		while(PSDcount < 50){
+			TIM3->CCR1 = 0;
+			TIM3->CCR2 = 0;
+		}
+		PSDcount=0;
+		countmode=0;
+
+
+		while(SPSDR[0] || SPSDR[1]){
+			Delay_DesiredSpeed(n_v1, n_v2);
+		}
+	}
+
+	////// Regular driving
+	PID(n_v1,n_v2,encoderL,encoderR);
 }
 
 void PSD_Bluetooth(){
@@ -415,27 +436,26 @@ void PSD_Bluetooth(){
 
 void Bluetooth(int first, int second, int third, int forth){
 
-		  	itoa(first, Buf1, 10);
-		  	SCI_OutChar('A');
-		  	SCI_OutString(Buf1);
-		  	HAL_UART_Transmit(&huart3,&space,1,10);
+	itoa(first, Buf1, 10);
+	SCI_OutChar('A');
+	SCI_OutString(Buf1);
+	HAL_UART_Transmit(&huart3,&space,1,10);
 
-		  	itoa(second, Buf2, 10);
-		  	SCI_OutChar('B');
-		  	SCI_OutString(Buf2);
-		  	HAL_UART_Transmit(&huart3,&space,1,10);
+	itoa(second, Buf2, 10);
+	SCI_OutChar('B');
+	SCI_OutString(Buf2);
+	HAL_UART_Transmit(&huart3,&space,1,10);
 
-		  	itoa(third, Buf3, 10);
-		  	SCI_OutChar('C');
-		  	SCI_OutString(Buf3);
-		  	HAL_UART_Transmit(&huart3,&space,1,10);
+	itoa(third, Buf3, 10);
+	SCI_OutChar('C');
+	SCI_OutString(Buf3);
+	HAL_UART_Transmit(&huart3,&space,1,10);
 
-		  	itoa(forth, Buf4, 10);
-		  	SCI_OutChar('D');
-		  	SCI_OutString(Buf4);
-
-		  	HAL_UART_Transmit(&huart3,&enter1,1,10);
-		  	HAL_UART_Transmit(&huart3,&enter2,1,10);
+	itoa(forth, Buf4, 10);
+	SCI_OutChar('D');
+	SCI_OutString(Buf4);
+  	HAL_UART_Transmit(&huart3,&enter1,1,10);
+  	HAL_UART_Transmit(&huart3,&enter2,1,10);
 
 }
 
@@ -448,24 +468,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 		encoderR = TIM4->CNT;
 		TIM4->CNT=0;
 
-		if(encoderL>150)encoderL=150;
-		if(encoderR>150)encoderR=150;
+		if(encoderL>200)encoderL=200;
+		if(encoderR>200)encoderR=200;
 		if(encoderL<1)encoderL=0;
 		if(encoderR<1)encoderR=0;
 
-		if(PSDflag==1){
-			PSDcount++;
-		}
+		PSD();
+		SONAR();
 
+//		if(Flag==1){
+//			Count++;
+//		}
+//
+//		if(countmode==1){
+//			PSDcount++;
+//		}
+
+//		PSD_Bluetooth();
+//
 		//Bluetooth(distance1,distance2,n_v1,n_v2);
-		if(Mode_Bluetooth==1) {
-			TIM3->CCR1=0;
-			TIM3->CCR2=0;
-	//		Bluetooth(distance1,distance2,n_v1,n_v2);
-			PSD_Bluetooth();
-
-		}
-
+//		if(Mode_Bluetooth==1) {
+//
+//	//		Bluetooth(distance1,distance2,n_v1,n_v2);
+//			PSD_Bluetooth();
+//		}
 
 	}
 }
@@ -477,16 +503,17 @@ void PID_Init() {
 
 }
 
-void PID(unsigned int x,unsigned int y,unsigned int m,unsigned int n) {          // PID 제어 함수
+void PID(unsigned int x,unsigned int y,unsigned int m,unsigned int n) {
 
+	////// PID controller
 	unsigned int Desired_Speed_L;
 	unsigned int Desired_Speed_R;
 
 	Desired_Speed_L = x;
 	Desired_Speed_R = y;
 
-	SpeedL =421.15 * exp(0.005*m);  //measured speed for left
-	SpeedR =420.52 * exp(0.0049*n); //measured speed for right
+	SpeedL =270.11 * exp(0.0065*m);  //measured speed for left
+	SpeedR =271.38 * exp(0.0065*n); //measured speed for right
 
 	Error_L = Desired_Speed_L - SpeedL;
 	Error_R = Desired_Speed_R - SpeedR;
@@ -503,7 +530,7 @@ void PID(unsigned int x,unsigned int y,unsigned int m,unsigned int n) {         
 	Motor_Signal_L = KP * TermP_L + KI * TermI_L + KD*TermD_L + Old_Motor_L;
 	Motor_Signal_R = KP * TermP_R + KI * TermI_R + KD*TermD_R + Old_Motor_R;
 
-	/*****여기는 잠깐보류******/
+	//limit speed
 	if(Motor_Signal_L<100) Motor_Signal_L=100; //400
 	if(Motor_Signal_L>1000) Motor_Signal_L=1000; //여기바꿈
 	if(Motor_Signal_R<100) Motor_Signal_R=100; //300
@@ -528,7 +555,6 @@ void PID(unsigned int x,unsigned int y,unsigned int m,unsigned int n) {         
   * @retval None
   */
 int main(void)
-
 {
   /* USER CODE BEGIN 1 */
 
@@ -568,56 +594,54 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
-  /*********INIT for PSD***********/
-  HAL_ADC_Start_DMA(&hadc1,&adcval[0],6);
+  //Initialize for PSD
+  HAL_ADC_Start_DMA(&hadc1,&adcval[0],10);
 
-  /**************UART Interrupt****************/
+  //Initialize for UART
   HAL_UART_Receive_IT(&huart3, &rx,1);
 
-  /************** PWN for MOTOR***************/
+  //Initialize for motor PWN
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 
-  /************** PWN for SONAR***************/
+  //Initialize for Sonar
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);//left
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);//right
-//  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);//front
 
-
-  /******** Signal for MOTOR DIRECTION********/
+  //Initialize for motor direction
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_10, SET);
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_11, RESET);
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, SET);
   HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, RESET);
 
-  /************* TIM for ENCODER *************/
+  //Initialize for encoder count value
   TIM2->CNT = 0;  // Initial CNT value
   TIM4->CNT = 0;  // Initial CNT value
 
-  /**************Initialization for Encoder******************/
+  //Initialize for Encoder
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1 | TIM_CHANNEL_2);
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1 | TIM_CHANNEL_2);
 
-  /**********Timer interrupt initialization for Encoder (20ms)*********/
+  //Initialize for timer interrupt initialization for Encoder (20ms)
   HAL_TIM_Base_Start_IT(&htim6);
-
   PID_Init();
+
+  //Initialize for blue-tooth mode
+  Mode_Bluetooth=0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  Mode_Bluetooth=0;
-
   while (1)
   {
-	  PSD();
-	  SONAR();
 
-	  if(Mode_Bluetooth==0){
+//	  Driving_Control();
 	  PID(n_v1,n_v2,encoderL,encoderR);
-	  }
-
+//	  if(Mode_Bluetooth==0){
+//		  Delay_DesiredSpeed(n_v1, n_v2);
+////	  	  PID(n_v1,n_v2,encoderL,encoderR);
+//	  }
 
   /* USER CODE END WHILE */
 
@@ -718,18 +742,51 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
  {
 	char g='g';
 
-	 if(huart->Instance == USART3){
+	if(huart->Instance == USART3){
 
 		 HAL_UART_Receive_IT(&huart3,&rx,1);
 
 		 if(rx=='b'){
 			 HAL_UART_Transmit(&huart3, &g, 1, 10);
-			 Mode_Bluetooth=1;
+			 Mode_Bluetooth = 1;
 		 }
 
 		 if(rx=='m') Mode_Bluetooth=0;
-
-	 }
+//		 if(rx=='s') {
+//			 if(Ldistance > Rdistance){
+//				 SonarLMAX = Rdistance ;
+//
+//			 }
+//			 if(Ldistance < Rdistance){
+//			 	 SonarRMAX = Ldistance;
+//			 	 //SonarRMAX = Ldistance;
+//			 }
+//			 if(Ldistance == Rdistance){
+//			 	 SonarLMAX = 150;
+//			 	 SonarRMAX = 150;
+//			 }
+//		 }
+		 if(rx=='q') {
+			 SonarLMAX = Rdistance;
+		 }
+		 if(rx=='e'){
+			 SonarRMAX = Ldistance;
+		 }
+		 if(rx=='l') SonarRMAX = 70;
+		 if(rx=='r') SonarLMAX = 70;
+		 if(rx=='o') {
+			 SonarLMAX = 300;
+			 SonarRMAX = 300;
+		 }
+		 if(rx=='w') {
+			 W1_MIN += 50;
+			 W2_MIN += 50;
+		 }
+		 if(rx=='x') {
+			 W1_MIN -= 50;
+			 W2_MIN -= 50;
+		}
+	}
 
  }//전체인터럽트 끝나는 괄호
 
