@@ -129,7 +129,7 @@ int encoderL, encoderR;
 int cntLast;
 char rx;
 
-uint8_t Mode_Bluetooth;
+volatile int Mode_Bluetooth;
 
 /********VELOCITY NORMALIZATION********/
 int W1_MIN = 600;														// Left_Motor Initial Velocity
@@ -174,8 +174,8 @@ int PSDdiff1;
 int PSDdiff2;
 
 //for delay
-volatile int countmode =0;
-volatile int PSDcount =0;
+volatile int countmode = 0;
+volatile int PSDcount = 0;
 volatile int Flag = 0;
 volatile int Count = 0;
 
@@ -189,6 +189,8 @@ float Old_Error_L=0;
 float Old_Error_R=0;
 float Old_Motor_L;
 float Old_Motor_R;
+float Motor_mean;
+float Motor_Speed;
 
 /************PID Control for cornering and avoiding obstacles*************/
 #define delta_t 0.02
@@ -526,14 +528,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	//Timer interrupt ev
 //			PSDcount++;
 //		}
 
-//		PSD_Bluetooth();
-//
+
+		//			itoa(Motor_Speed, Buf4, 10);
+		//			SCI_OutChar('S');
+		//			SCI_OutString(Buf4);
+		//			HAL_UART_Transmit(&huart3,&enter1,1,10);
+		//			HAL_UART_Transmit(&huart3,&enter2,1,10);
+
+
 		//Bluetooth(distance1,distance2,n_v1,n_v2);
-//		if(Mode_Bluetooth==1) {
-//
+		if(Mode_Bluetooth==1) {
+			TIM3->CCR1 = 0;
+			TIM3->CCR2 = 0;
 //	//		Bluetooth(distance1,distance2,n_v1,n_v2);
 //			PSD_Bluetooth();
-//		}
+		}
 
 	}
 }
@@ -586,6 +595,9 @@ void PID(unsigned int x,unsigned int y,unsigned int m,unsigned int n) {
 
 	TIM3->CCR1 = Motor_Signal_L; //actual PWM for motor
 	TIM3->CCR2 = Motor_Signal_R;
+
+	Motor_mean = (m + n)/2;
+	Motor_Speed = 0.2371 * Motor_mean + 0.3324;
 
 }
 
@@ -669,7 +681,7 @@ int main(void)
   PID_Init();
 
   //Initialize for blue-tooth mode
-  Mode_Bluetooth=0;
+  Mode_Bluetooth = 1;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -679,11 +691,13 @@ int main(void)
   {
 
 //	  Driving_Control();
-	  PID(n_v1,n_v2,encoderL,encoderR);
-//	  if(Mode_Bluetooth==0){
+//	  PID(n_v1,n_v2,encoderL,encoderR);
+	  if(Mode_Bluetooth==0){
 //		  Delay_DesiredSpeed(n_v1, n_v2);
-////	  	  PID(n_v1,n_v2,encoderL,encoderR);
-//	  }
+//		  TIM3->CCR1 = 0;
+//		  TIM3->CCR2 = 0;
+	  	  PID(n_v1,n_v2,encoderL,encoderR);
+	  }
 
   /* USER CODE END WHILE */
 
@@ -788,46 +802,32 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 		 HAL_UART_Receive_IT(&huart3,&rx,1);
 
-		 if(rx=='b'){
-			 HAL_UART_Transmit(&huart3, &g, 1, 10);
-			 Mode_Bluetooth = 1;
+		 if(rx=='w'){
+			 Mode_Bluetooth = 0;
 		 }
 
-		 if(rx=='m') Mode_Bluetooth=0;
-//		 if(rx=='s') {
-//			 if(Ldistance > Rdistance){
-//				 SonarLMAX = Rdistance ;
-//
-//			 }
-//			 if(Ldistance < Rdistance){
-//			 	 SonarRMAX = Ldistance;
-//			 	 //SonarRMAX = Ldistance;
-//			 }
-//			 if(Ldistance == Rdistance){
-//			 	 SonarLMAX = 150;
-//			 	 SonarRMAX = 150;
-//			 }
+		 if(rx=='s') Mode_Bluetooth = 1;
+
+//		 if(rx=='q') {
+//			 SonarLMAX = Rdistance;
 //		 }
-		 if(rx=='q') {
-			 SonarLMAX = Rdistance;
-		 }
-		 if(rx=='e'){
-			 SonarRMAX = Ldistance;
-		 }
-		 if(rx=='l') SonarRMAX = 70;
-		 if(rx=='r') SonarLMAX = 70;
-		 if(rx=='o') {
-			 SonarLMAX = 300;
-			 SonarRMAX = 300;
-		 }
-		 if(rx=='w') {
-			 W1_MIN += 50;
-			 W2_MIN += 50;
-		 }
-		 if(rx=='x') {
-			 W1_MIN -= 50;
-			 W2_MIN -= 50;
-		}
+//		 if(rx=='e'){
+//			 SonarRMAX = Ldistance;
+//		 }
+//		 if(rx=='l') SonarRMAX = 70;
+//		 if(rx=='r') SonarLMAX = 70;
+//		 if(rx=='o') {
+//			 SonarLMAX = 300;
+//			 SonarRMAX = 300;
+//		 }
+//		 if(rx=='z') {
+//			 W1_MIN += 50;
+//			 W2_MIN += 50;
+//		 }
+//		 if(rx=='x') {
+//			 W1_MIN -= 50;
+//			 W2_MIN -= 50;
+//		}
 	}
 
  }//전체인터럽트 끝나는 괄호
