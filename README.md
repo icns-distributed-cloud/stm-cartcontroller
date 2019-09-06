@@ -1,6 +1,5 @@
 # STM-based Self-Driving Cart Controller 
-[(https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
-
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
 ## 1. Development project setup
 * Step 1. Share a CubeMX file
 * Step 2. Create "stm-cartcontroller" folder
