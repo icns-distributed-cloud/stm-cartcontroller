@@ -1,5 +1,5 @@
 # STM-based Self-Driving Cart Controller 
-https://img.shields.io/badge/Versin-v%200.0.5-yellow [![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
+(https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
 
 ## 1. Development project setup
 * Step 1. Share a CubeMX file
