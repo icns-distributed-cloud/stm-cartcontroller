@@ -808,26 +808,26 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 		 if(rx=='s') Mode_Bluetooth = 1;
 
-//		 if(rx=='q') {
-//			 SonarLMAX = Rdistance;
-//		 }
-//		 if(rx=='e'){
-//			 SonarRMAX = Ldistance;
-//		 }
-//		 if(rx=='l') SonarRMAX = 70;
-//		 if(rx=='r') SonarLMAX = 70;
-//		 if(rx=='o') {
-//			 SonarLMAX = 300;
-//			 SonarRMAX = 300;
-//		 }
-//		 if(rx=='z') {
-//			 W1_MIN += 50;
-//			 W2_MIN += 50;
-//		 }
-//		 if(rx=='x') {
-//			 W1_MIN -= 50;
-//			 W2_MIN -= 50;
-//		}
+		 if(rx=='q') {
+			 SonarLMAX = Rdistance;
+		 }
+		 if(rx=='e'){
+			 SonarRMAX = Ldistance;
+		 }
+		 if(rx=='l') SonarRMAX = 35;
+		 if(rx=='r') SonarLMAX = 70;
+		 if(rx=='o') {
+			 SonarLMAX = 300;
+			 SonarRMAX = 300;
+		 }
+		 if(rx=='z') {
+			 W1_MIN += 50;
+			 W2_MIN += 50;
+		 }
+		 if(rx=='x') {
+			 W1_MIN -= 50;
+			 W2_MIN -= 50;
+		}
 	}
 
  }//전체인터럽트 끝나는 괄호
