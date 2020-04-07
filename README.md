@@ -1,6 +1,13 @@
 # STM-based Self-Driving Cart Controller 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)  
-## 1. Development project setup
+
+## 1. Introduction
+Stm-cartcontroller is edge cloud based indoor self-driving cart.
+This cart uses stm32f4discovery board.
+It can drive itself with ultrasonic sensors, psd sensors and usb camera.
+We can command to the cart with using edge cloud system.
+
+## 2. Development project setup
 * Step 1. Share a CubeMX file
 * Step 2. Create "stm-cartcontroller" folder
 * Step 3. Execute the shared CubeMX file
@@ -11,7 +18,7 @@
 * Step 8. Set git origin "https://github.com/icns-distributed-cloud/stm-cartcontroller.git"
 * Step 9. Git pull origin master
 
-## 2. Project development
+## 3. Project development
 * Step 1. Rasie an issue and create a branch
 * Step 2. Pull the branch to local repository
 * Step 3. Checkout the branch
