@@ -202,6 +202,10 @@ float KD = -0.00003;                            // Control variable of Different
 __IO uint32_t uwTick = 0;                         // Redefined for user convenience
 extern __IO uint32_t uwTick;
 
+/**********CAMERA Normalization***********/
+int CAMVAL = 25;                                // Camera sensor value 0 to 50 (middle value=25)
+int LCAMDIFF, RCAMDIFF;						    // For Normalized value of Camera
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -409,6 +413,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)            // Timer 
     }
 }
 
+void camera() {
+    //for center driving
+    if (CAMVAL < 25) LCAMDIFF = 25 - CAMVAL;                           //Leftside
+    if (CAMVAL > 25) RCAMDIFF = CAMVAL - 25;                           //Rightside
+    if (LCAMDIFF > 5) LMOTOR += LCAMDIFF * 10;                 //have to change parameter value
+    if (RCAMDIFF > 5) RMOTOR += RCAMDIFF * 10;	               //have to change parameter value
+}
+
 void PID(unsigned int x, unsigned int y, unsigned int m, unsigned int n) {
 
     ////// PID controller
@@ -448,6 +460,7 @@ void PID(unsigned int x, unsigned int y, unsigned int m, unsigned int n) {
     LOLDMOTOR = LMOTOR;
     ROLDMOTOR = RMOTOR;
 
+    camera();
     TIM3->CCR1 = LMOTOR; //actual PWM for motor
     TIM3->CCR2 = RMOTOR;
 }
