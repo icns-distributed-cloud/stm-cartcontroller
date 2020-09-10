@@ -31,8 +31,10 @@ A Moving Edge Cloud in the cart and Fixed Edge Clouds communicate. The cart can 
 ## Result demo
 ### Obstacle avoidance demo
 When a object is suddenly dropped in front of the cart, cart avoid the obtacle and drive safely to the destination. :smile:
+
 <img src="https://user-images.githubusercontent.com/53041199/92321743-654c0500-f067-11ea-8411-f52be2a7b3d8.gif">
 
 ### Indoor self-driving demo
 The cart drives automonusly and safely by the self-controll system and communication between edge clouds. :thumbsup:
+
 <img src="https://user-images.githubusercontent.com/53041199/92321739-5feeba80-f067-11ea-88a7-7bf8f653404b.gif">
