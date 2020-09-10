@@ -8,7 +8,7 @@ The cart can sense surroundings by ultrasonic sensors, psd sensors and usb camer
 A Moving Edge Cloud in the cart and Fixed Edge Clouds communicate. The cart can drive autonomously.
 
 ## Getting started with stm-cartcontroller
-## 1. Development project setup
+### 1. Development project setup
 * Step 1. Share a CubeMX file
 * Step 2. Create "stm-cartcontroller" folder
 * Step 3. Execute the shared CubeMX file
@@ -19,7 +19,7 @@ A Moving Edge Cloud in the cart and Fixed Edge Clouds communicate. The cart can 
 * Step 8. Set git origin "https://github.com/icns-distributed-cloud/stm-cartcontroller.git"
 * Step 9. Git pull origin master
 
-## 2. Project development
+### 2. Project development
 * Step 1. Rasie an issue and create a branch
 * Step 2. Pull the branch to local repository
 * Step 3. Checkout the branch
